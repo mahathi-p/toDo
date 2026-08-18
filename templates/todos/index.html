@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{# ── Reminder banner ──────────────────────────────────────────── #}
+{% if reminders %}
+{% set overdue_list = reminders | selectattr('due_date', 'lt', today) | list %}
+<div class="reminder-banner">
+  <h6>
+    <i class="bi bi-alarm-fill me-1"></i>
+    {% if overdue_list %}{{ overdue_list|length }} overdue{% endif %}
+    {% if overdue_list and reminders|length > overdue_list|length %} · {% endif %}
+    {% if reminders|length > overdue_list|length %}{{ reminders|length - overdue_list|length }} due today{% endif %}
+  </h6>
+  <ul>
+    {% for task in reminders %}
+    <li>
+      <strong>{{ task.title }}</strong>
+      {% if task.due_date < today %}<em>(overdue)</em>{% else %}<em>(today)</em>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{# ── Add task notepad ─────────────────────────────────────────── #}
+<div class="notepad-card">
+  <div class="notepad-label"><i class="bi bi-plus me-1"></i>Pin a new note</div>
+  <form method="POST" action="{{ url_for('todos.add') }}" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-md-4">
+        <input type="text" name="title" class="form-control"
+               placeholder="What needs doing?" required>
+      </div>
+      <div class="col-6 col-sm-4 col-md-2">
+        <input type="date" name="due_date" class="form-control" title="Due date">
+      </div>
+      <div class="col-6 col-sm-4 col-md-2">
+        <select name="priority" class="form-select">
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-md-2">
+        <input type="text" name="category" class="form-control"
+               placeholder="Category (e.g. work)">
+      </div>
+      <div class="col-12 col-sm-6 col-md-1">
+        <input type="text" name="notes" class="form-control"
+               placeholder="Notes">
+      </div>
+      <div class="col-12 col-md-1">
+        <button type="submit" class="btn-pin w-100">Add</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{# ── Category filter tabs ─────────────────────────────────────── #}
+{% if categories %}
+<div class="cat-filters">
+  <a href="{{ url_for('todos.index') }}"
+     class="cat-tab {% if not active_category %}active{% endif %}">All</a>
+  {% for cat in categories %}
+  <a href="{{ url_for('todos.index', category=cat) }}"
+     class="cat-tab {% if active_category == cat %}active{% endif %}">
+    {{ cat.capitalize() }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Task counter ─────────────────────────────────────────────── #}
+{% if tasks %}
+<div class="task-counter">
+  {{ tasks | rejectattr('completed') | list | length }} remaining ·
+  {{ tasks | selectattr('completed')  | list | length }} done
+</div>
+
+{# ── Sticky note grid ─────────────────────────────────────────── #}
+<div class="sticky-grid">
+  {% for task in tasks %}
+  <div class="sticky-note {% if task.completed %}note-done{% else %}note-{{ task.priority }}{% endif %}">
+
+    {# Category chip #}
+    {% if task.category %}
+    <span class="note-category">{{ task.category }}</span>
+    {% endif %}
+
+    {# Title #}
+    <div class="note-title {% if task.completed %}done-text{% endif %}">
+      {{ task.title }}
+    </div>
+
+    {# Notes / dependencies #}
+    {% if task.notes %}
+    <div class="note-body">{{ task.notes }}</div>
+    {% endif %}
+
+    {# Footer: due date + actions #}
+    <div class="note-footer">
+      <span class="note-due {% if task.due_date and task.due_date < today and not task.completed %}overdue{% endif %}">
+        {% if task.due_date %}
+        <i class="bi bi-calendar3"></i> {{ task.due_date.strftime('%b %d') }}
+        {% endif %}
+      </span>
+
+      <div class="note-actions">
+        {# Toggle complete #}
+        <form method="POST" action="{{ url_for('todos.toggle', todo_id=task.id) }}" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="_category" value="{{ active_category }}">
+          <button type="submit"
+                  class="btn-icon btn-check {% if task.completed %}done{% endif %}"
+                  title="{% if task.completed %}Mark incomplete{% else %}Mark complete{% endif %}">
+            <i class="bi {% if task.completed %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+          </button>
+        </form>
+
+        {# Edit #}
+        <a href="{{ url_for('todos.edit', todo_id=task.id) }}"
+           class="btn-icon" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </a>
+
+        {# Delete #}
+        <form method="POST" action="{{ url_for('todos.delete', todo_id=task.id) }}" class="m-0"
+              onsubmit="return confirm('Remove this note?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="_category" value="{{ active_category }}">
+          <button type="submit" class="btn-icon btn-del" title="Delete">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-journal-x"></i>
+  <p>No notes pinned yet</p>
+  <small>Add your first one above</small>
+</div>
+{% endif %}
+
+{% endblock %}

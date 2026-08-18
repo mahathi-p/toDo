@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="edit-wrap">
+  <div class="edit-card">
+    <h5><i class="bi bi-pencil-square me-2"></i>Edit Note</h5>
+    <form method="POST" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <label>What needs doing?</label>
+        <input type="text" name="title" class="form-control"
+               value="{{ todo.title }}" required>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label>Category</label>
+          <input type="text" name="category" class="form-control"
+                 value="{{ todo.category or '' }}"
+                 placeholder="e.g. work, personal">
+        </div>
+        <div class="col-md-4">
+          <label>Due Date</label>
+          <input type="date" name="due_date" class="form-control"
+                 value="{{ todo.due_date.isoformat() if todo.due_date else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label>Priority</label>
+          <select name="priority" class="form-select">
+            {% for p in priorities %}
+            <option value="{{ p }}" {% if todo.priority == p %}selected{% endif %}>
+              {{ p.capitalize() }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label>Notes / Dependencies</label>
+        <textarea name="notes" class="form-control" rows="3"
+                  placeholder="Blockers, links, context…">{{ todo.notes or '' }}</textarea>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn-save">Save Changes</button>
+        <a href="{{ url_for('todos.index') }}" class="btn-cancel-edit">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
